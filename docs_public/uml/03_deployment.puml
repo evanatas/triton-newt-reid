@@ -1,0 +1,37 @@
+@startuml deployment
+' ВКР triton 3.0 — Deployment диаграмма (офлайн-инференс + опц. обучение)
+skinparam node {
+  BackgroundColor #F7F7F7
+}
+
+node "Ноутбук биолога\n(CPU или базовый GPU, OFFLINE)" as Laptop {
+  artifact "UI: Streamlit (MVP)\nTelegram — план" as UIart #LightYellow
+  component "Inference-движок\n(Python, PyTorch)" as Inf
+  artifact "Веса YOLO seg+pose (.pt)" as YoloW
+  artifact "Веса MegaDescriptor-L-384\n(локально, загружены 1 раз)" as MegaW
+  database "Хранилище .npy/.csv\n(SQLite — план)" as DBn #LightYellow
+  artifact "Эмбеддинги галереи (.npy)\nFAISS — план масштаба" as FaissN #LightYellow
+  folder "crops_belly/ (кропы)" as Crops
+}
+
+cloud "HuggingFace Hub\n(одноразовая загрузка весов)" as HF
+node "Colab GPU\n(ОПЦ.: дообучение — оценено, НЕ в финале)" as Colab {
+  component "embed-train\n(ArcFace cross-fit, опц.)" as Train
+}
+
+HF ..> MegaW : pull (offline после загрузки)
+Colab ..> YoloW : экспорт весов
+Train ..> MegaW : finetuned-веса (опц.)
+UIart --> Inf
+Inf --> YoloW
+Inf --> MegaW
+Inf --> FaissN
+Inf --> DBn
+Inf --> Crops
+
+note right of Laptop
+  Требования среды: офлайн, CPU/базовый GPU, latency ≤1–2 c.
+  Финальная система — zero-shot (обучение НЕ требуется, воспроизводимо локально без GPU).
+  Жёлтое — целевая архитектура (FAISS/SQLite/Telegram) — не в MVP; демо — numpy-косинус + .npy/.csv.
+end note
+@enduml

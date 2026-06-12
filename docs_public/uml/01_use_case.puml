@@ -1,0 +1,48 @@
+@startuml use_case
+' ВКР triton 3.0 — Use Case диаграмма (re-ID тритонов по узору брюшка)
+left to right direction
+skinparam actorStyle awesome
+
+actor "Биолог\n(ИПЭЭ РАН)" as Bio
+actor "Администратор\nбазы" as Admin
+
+rectangle "Система re-ID тритонов" {
+  usecase "Загрузить фото брюшка\n(одно / пакет)" as UC_upload
+  usecase "Опознать особь\n(top-K + % сходства)" as UC_identify
+  usecase "Посмотреть оверлей\nсовпавших пятен" as UC_overlay
+  usecase "Решение known / new\n(порог по score)" as UC_knownnew
+  usecase "Добавить фото\nв карточку особи" as UC_addphoto
+  usecase "Завести новую особь" as UC_newind
+  usecase "Слияние / разделение\nкарточек" as UC_merge
+  usecase "Карточка-досье\n(встречи во времени, L/LCD, травмы)" as UC_card
+  usecase "Область поиска\n(вся база / вид / проект)" as UC_scope
+}
+
+Bio --> UC_upload
+Bio --> UC_identify
+Bio --> UC_overlay
+Bio --> UC_addphoto
+Bio --> UC_newind
+Bio --> UC_card
+Bio --> UC_scope
+Admin --> UC_merge
+Admin --> UC_card
+
+UC_upload ..> UC_identify : <<include>>
+UC_identify ..> UC_knownnew : <<include>>
+UC_identify ..> UC_overlay : <<extend>>
+UC_knownnew ..> UC_addphoto : <<extend>>\n(known)
+UC_knownnew ..> UC_newind : <<extend>>\n(new)
+
+note bottom of UC_overlay
+  Дифференциатор №1 (запрос биологов):
+  оверлей совпавших пятен — даёт
+  матчинг созвездия центроидов;
+  embedding-only аналоги на DINOv2 структурно не могут.
+end note
+
+legend bottom
+  Реализовано в MVP (демо): загрузить фото · опознать (top-K + %) · оверлей пятен · known/new · область поиска.
+  Спроектировано (целевой функционал), НЕ в MVP: карточка-досье · добавить фото · завести особь · слияние/разделение.
+endlegend
+@enduml

@@ -1,0 +1,59 @@
+@startuml component
+' ВКР triton 3.0 — Component диаграмма (фактическая архитектура пайплайна)
+skinparam componentStyle rectangle
+
+package "Данные (Блок 1, src/triton_data)" {
+  [parsers / ingest] as Ingest
+  [manifest + splits\n(gallery/probe, train/dev/test, kpi_scope)] as Manifest
+  [loader.select] as Loader
+}
+
+package "Препроцессинг (Блоки 2–3, src/triton_crop)" {
+  [Сегментация брюшка\nYOLO-seg + pose (predict)] as Seg
+  [Кроп+ориентация\npipeline.canonical_belly_crop] as Crop
+  [Распрямление\nunroll (ribbon / debend)] as Unroll
+}
+
+package "Сравнение (Блоки 4–6)" {
+  [Эмбеддер re-ID\nMegaDescriptor-L-384 (Swin-L, zero-shot)\nArcFace-finetune — оценён, отвергнут] as Embed
+  [Вектор-поиск top-K\nnumpy-косинус (FAISS — план)] as Faiss #LightYellow
+  [Детектор пятен\nspots (deviation/darkness)] as SpotDet
+  [Матчер созвездия\nconstellation (guided, без зеркала)] as Match
+  [Гибрид + калибровка\nhybrid + score→%] as Hybrid
+  [Решение known/new] as Decide
+}
+
+package "Хранилище / выдача" {
+  database ".npy / .csv\n(SQLite — целевое, план)" as DB #LightYellow
+  [Оверлеи совпавших пятен\nviz] as Viz
+  [UI: Streamlit (MVP)\nTelegram — план] as UI #LightYellow
+}
+
+legend bottom
+  Сплошное (белое) — реализовано в MVP.
+  |<#LightYellow> жёлтое| — целевая архитектура (FAISS / SQLite / Telegram) — НЕ в MVP.
+endlegend
+
+Ingest --> Manifest
+Manifest --> Loader
+Loader --> Seg
+Seg --> Crop
+Crop --> Unroll
+Unroll --> Embed
+Unroll --> SpotDet
+Embed --> Faiss
+Faiss --> Hybrid : top-K кандидатов (особи)
+SpotDet --> Match
+Match --> Hybrid : переранжир + % совпавших пятен
+Hybrid --> Decide
+Match --> Viz : matched_pairs
+Decide --> DB
+Decide --> UI
+Viz --> UI
+
+note bottom of Hybrid
+  Лучшая система проекта: zero-shot Mega + unroll_ribbon (@5 0.375).
+  Матчер (guided) подтверждён тестами, даёт интерпретируемость;
+  KPI-потолок задают ДАННЫЕ (temporal-вариативность), не код.
+end note
+@enduml

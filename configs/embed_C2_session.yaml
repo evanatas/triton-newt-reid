@@ -1,0 +1,6 @@
+# Референс-фиксация конфигурации эксперимента C2 (session-aware дообучение, НЕ финальная система).
+# Автоматически НЕ загружается: notebooks/temporal_ablation.ipynb задаёт те же оверрайды через dataclasses.replace.
+# Для ручной загрузки: cfg = load_embed_config(Path("configs/embed_C2_session.yaml")).
+# Прочие поля — дефолты EmbedConfig/embed.yaml.
+session_aware_sampling: true
+train_cohorts: [TK, PW]      # LAB held-out (НЕ в обучении) — для C4 поставить [TK, PW, LAB]

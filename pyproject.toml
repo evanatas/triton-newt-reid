@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triton3"
+version = "1.0.0"
+description = "Open-set re-ID тритонов по узору брюшка: данные, сегментация/кроп, распрямление, эмбеддер, матчинг пятен, демо (triton 3.0)"
+readme = "README.md"
+# AGPL-3.0: выбор обусловлен зависимостью ultralytics (AGPL-3.0) — copyleft распространяется на проект.
+license = "AGPL-3.0-or-later"
+authors = [{name = "Корюкалов Сергей", email = "evanatas666@gmail.com"}]
+requires-python = ">=3.11"   # локально 3.13; нижняя граница задана пинами numpy==2.4.4 / pandas==3.0.2 (Colab Python 3.12 проходит)
+# Зависимости НЕ объявляем здесь намеренно: окружение anaconda уже укомплектовано
+# (см. requirements.txt — источник правды по версиям). `pip install -e .` ставит
+# только сам пакет triton_data в editable-режиме и не трогает уже стоящие numpy2/pandas3.
+
+[project.optional-dependencies]
+# Блок 2 (triton_crop): сегментация/keypoints/кроп. Ставится `pip install -e ".[crop]"`.
+# SAM2 сюда НЕ кладём — он в изолированном venv tools/sam2-venv (конфликт numpy2/pandas3).
+crop = [
+  "ultralytics>=8.4",
+  "scikit-image>=0.25",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  # pycocotools ещё не адаптирован под numpy 2 (__array__ без copy keyword); внешняя либа, не наш код
+  "ignore:.*__array__ implementation doesn't accept a copy keyword.*:DeprecationWarning",
+]

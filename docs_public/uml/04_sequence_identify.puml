@@ -1,0 +1,37 @@
+@startuml sequence_identify
+' ВКР triton 3.0 — Sequence диаграмма: опознание особи по фото
+actor Биолог as Bio
+participant "UI\n(Streamlit/TG)" as UI
+participant "Сегментация\n(YOLO seg+pose)" as Seg
+participant "Кроп+распрямление\n(pipeline+unroll)" as Crop
+participant "Эмбеддер\n(MegaDescriptor, zero-shot)" as Emb
+participant "Вектор-поиск\n(numpy-косинус; FAISS — план)" as Faiss
+participant "Детектор+матчер пятен\n(spots+constellation)" as Spot
+participant "Гибрид/калибровка" as Hyb
+database ".npy/.csv\n(SQLite — план)" as DB
+
+Bio -> UI : загрузить фото брюшка
+UI -> Seg : кадр
+Seg -> Seg : маска пуза + keypoints (голова/хвост)
+Seg -> Crop : маска + ориентация
+Crop -> Crop : canonical_belly_crop → unroll_ribbon
+Crop -> Emb : канонический кроп
+Emb -> Faiss : вектор-запрос
+Faiss --> Hyb : top-K кандидатов-особей
+Crop -> Spot : кроп (belly_oriented)
+Spot -> Spot : детекция пятен → созвездие
+Spot -> Hyb : score + matched_pairs vs top-K
+Hyb -> Hyb : переранжир + score→%
+Hyb -> Hyb : known / new (порог)
+Hyb --> UI : top-K особей + % + оверлей пятен
+UI --> Bio : выдача (карточки + side-by-side оверлей)
+== ниже — целевой сценарий (досье/БД), НЕ в MVP ==
+Bio -> UI : подтвердить → добавить в карточку / завести новую
+UI -> DB : обновить досье особи (встреча, фото)
+
+note over Emb, Spot
+  Эмбеддер закрывает top-5/top-30 (recall),
+  матчер созвездия бьёт в top-1 + интерпретируемость.
+  На temporal Карелина — потолок данных (см. оценку ВКР).
+end note
+@enduml

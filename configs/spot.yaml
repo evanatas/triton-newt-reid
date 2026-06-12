@@ -1,0 +1,35 @@
+# Блок 5 — матчинг созвездия пятен (дублирует дефолты SpotConfig; лишние ключи игнорируются).
+# Детектор и матчер подключаемые — лучший выбирается честным A/B на dev (cli spot-ab). test НЕ вскрывать.
+
+# --- поверхность детекции (НЕ ribbon: ribbon сливает пятна, spot-QA Блока 3) ---
+detect_variant: belly_oriented      # belly_oriented | unroll_debend
+fallback_variant: belly_oriented
+
+# --- детектор пятен (подключаемый; лучший — по A/B на dev) ---
+detect_method: deviation            # deviation | darkness | log | dog
+deviation_k: 4.0                    # пятно: отклонение цвета от медианы тела > k·MAD
+darkness_frac: 0.62                 # darkness: темнее 62% средней яркости тела (реальные тёмные пятна)
+mask_erode_px: 4                    # эрозия маски перед детекцией — убрать краевые артефакты
+spot_min_area: 6                    # мин площадь пятна, px
+spot_top_n: 20                      # отбор top-N (против over-detection)
+spot_min_score: 0.0
+select_by: salience                 # salience (area×contrast) | area — отбор top-N
+bg_sum_thr: 30                      # foreground_from_crop: near-чёрный фон по сумме каналов
+log_min_sigma: 2.0                  # для log/dog (skimage)
+log_max_sigma: 8.0
+log_num_sigma: 5
+log_threshold: 0.05
+
+# --- матчер созвездия (similarity, det>0, без зеркала) ---
+match_method: guided                # guided (дескриптор-кандидаты + исчерпывающий перебор) | ransac | nn
+descriptor_knn: 5                   # соседей в локальном дескрипторе (guided)
+match_knn: 4                        # кандидатов-соответствий на пятно (guided)
+ransac_iters: 500                   # случайный RANSAC — для sensitivity-сравнения
+match_inlier_tol: 0.08              # доля масштаба созвездия
+score_norm: max                     # max (устойчиво к спурьёзным мелким созвездиям) | min | mean | jaccard
+min_inliers: 3                      # < min_inliers совпавших → score 0 (коинцидентное 2-3-точечное ≠ матч)
+min_spots_for_match: 3
+
+# --- метрики / воспроизводимость ---
+recall_ks: [1, 5]
+seed: 42

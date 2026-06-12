@@ -1,0 +1,27 @@
+# CI: герметичный прогон тестов на push/PR. Suite не требует сети, весов и данных заказчика
+# (data/, artifacts/, *.pt, материалы/ — gitignored, в клон не попадают).
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Базовые зависимости из requirements.txt; extra [crop] НЕ ставим:
+      # ultralytics тяжёлый, герметичному suite не нужен.
+      - name: Установка зависимостей
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+      - name: Тесты
+        run: pytest -q

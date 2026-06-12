@@ -1,0 +1,47 @@
+# Ручки Блока 4 (дообучение эмбеддера re-ID). Значения дублируют дефолты EmbedConfig (config.py).
+# Рецепт MegaDescriptor (Čermák WACV-2024) с поправкой на малый датасет (~600 кадров) — урок 2.0.
+
+# --- эмбеддер и его вход ---
+base_model: "hf-hub:BVRA/MegaDescriptor-L-384"  # timm zero-shot baseline → finetune; MiewID — 2-й кандидат A/B
+image_size: 384            # сторона входа (= сторона канонического кропа Блока 2/3)
+embed_variant: unroll_ribbon       # принятый вход (Блок 3: значимый @5, McNemar p=0.027)
+fallback_variant: belly_oriented   # если нет ribbon-кропа (тот же fallback-протокол, что в A/B cmd_ab)
+
+# --- MiewID (2-й кандидат A/B; Rosa: MiewID 73/93 > MegaDescriptor 63/83 на hard-split) ---
+miewid_model: "conservationxlabs/miewid-msv3"  # transformers AutoModel(trust_remote_code); выход 2152-d
+miewid_revision: "4f1d7f2b521149e5fe34bb85f377248ce9971a7d"  # пин = состояние main на 2026-06-10 (= embed_model.MIEWID_REVISION); MiewID — dev-сравнение Блока 4, НЕ sealed-система
+miewid_image_size: 440     # вход MiewID 440 + ImageNet-norm (НЕ 384). Лицензия: см. THIRD_PARTY_NOTICES.md (не объявлена → академ-цитирование)
+
+# --- ArcFace (Čermák: лучший сеттинг lr=1e-3, m=0.5, s=64 → median 87.3%) ---
+arcface_margin: 0.5
+arcface_scale: 64.0
+
+# --- оптимизация: ЗАФИКСИРОВАННЫЙ рецепт (код всегда строит SGD + cosine-annealing с warmup, без раннего
+#     стопа — честность даёт cross-fit OOF). SGD momentum 0.9, 30 эпох, P×K=8×4 (Čermák WACV-2024, малый датасет) ---
+optimizer: sgd
+momentum: 0.9
+lr_head: 0.001             # голова ArcFace учится быстрее backbone
+lr_backbone: 0.00001       # backbone дотюнивается мягко (анти-оверфит)
+weight_decay: 0.0001
+epochs: 30
+warmup_epochs: 3
+
+# --- P×K-сэмплер metric learning (P особей × K кадров на батч) ---
+batch_p: 8
+batch_k: 4
+
+# --- регуляризация против оверфита Swin-L на малом датасете (урок 2.0) ---
+freeze_backbone_stages: 3  # морозит ~68% Swin-L (layers[2]=66% весов): регуляризация малой выборки + экономия VRAM. При CUDA OOM на T4 — ещё уменьшить batch_p (8->4) или freeze=4
+augment: true
+
+# --- честная оценка (cross-fit out-of-fold ПО ОСОБЯМ; анти-утечка train→gallery) ---
+cross_fit_folds: 5
+recall_ks: [1, 5]          # какие top-k мерить (KPI: top-1 >=75 / top-5 >=95)
+
+# --- open-set (known/new + калибровка порога) ---
+open_set_youden: true      # порог по индексу Юдена на open_dev (open_test НЕ вскрывать)
+open_set_margin_min: 0.0   # доп. порог margin top1-top2 (урок 2.0: margin лучше score; 0 = только score)
+
+# --- воспроизводимость / артефакты ---
+seed: 42
+ckpt_dir: "artifacts/embed"  # чекпойнты finetune (Colab -> Drive каждую эпоху)

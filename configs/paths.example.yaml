@@ -1,0 +1,46 @@
+# Пути и описание датасетов — ПУБЛИЧНЫЙ ШАБЛОН (triton 3.0, Блок 1: Данные).
+# Скопируйте в configs/paths.yaml и подставьте реальные значения (paths.yaml в .gitignore — личные пути).
+# Сырые данные заказчика лежат ВНЕ репозитория и НЕ публикуются.
+
+workspace_root: "/path/to/datasets_root"   # абсолютный путь к корню с сырыми папками датасетов
+seed: 42
+image_extensions: [".jpg", ".jpeg"]         # сравнение без учёта регистра (внешний датасет — .JPEG)
+
+# Подтверждённые дубли каталога (одна особь под двумя номерами) — сливаются. Обычно пусто.
+merge_individuals: {}
+
+datasets:
+  - name: karelinii
+    dir: "<TK_dataset_dir>"                  # папка вида-1 (folder_per_id: папка = особь)
+    species: "Triturus karelinii"
+    id_prefix: "TK"
+    role: target
+    layout: folder_per_id
+    skip_dirs: ["<dir_without_images>"]      # папки без снимков — пропустить
+    dates_in_filename: true                  # дата (MMYY) в имени файла ИЛИ в имени подпапки
+
+  - name: lab
+    dir: "<LAB_dataset_dir>"                 # отдельная целевая когорта (НЕ перепоимки вида-1)
+    species: "Triturus_unconfirmed"
+    species_confirmed: false
+    id_prefix: "LAB"
+    role: target
+    layout: date_subdirs                     # подпапки-даты DD.MM.YYYY
+    id_from: filename_stem                   # "03.jpg"->особь 3; "03.1.jpg"->особь 3 (вариант кадра)
+
+  - name: pleurodeles
+    dir: "<PW_dataset_dir>"                  # папка вида-2 (folder_per_id)
+    species: "Pleurodeles waltl"
+    id_prefix: "PW"
+    role: target
+    layout: folder_per_id
+    dates_in_filename: false
+
+  - name: gcnid
+    dir: "<external_dataset_dir>"            # внешний датасет (другой вид) — только pretrain/прокси, НЕ в KPI
+    species: "Triturus cristatus"
+    id_prefix: "GCN"
+    role: external
+    layout: metadata_csv
+    metadata_csv: "metadata.csv"
+    raw_subdir: "Raw_Data"

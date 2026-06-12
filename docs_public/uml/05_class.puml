@@ -1,0 +1,122 @@
+@startuml class_pipeline
+' ВКР triton 3.0 — Class/Component диаграмма модулей пайплайна re-ID
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+title Структура модулей системы re-ID (пакет triton_crop + triton_data)
+
+package "triton_data — данные" {
+  class Ingest <<module>> {
+    ingest_tk / pw / lab / gcn
+  }
+  class Manifest <<module>> {
+    build_manifest()
+  }
+  class Splits <<module>> {
+    make_splits()
+    анти-утечка по особи
+  }
+  class Loader <<module>> {
+    select(stage, scope)
+  }
+}
+
+package "Сегментация и поза" {
+  class BellySegmenter {
+    weights : best.pt
+    predict(rgb) : mask
+  }
+  class PoseEstimator {
+    weights : best.pt
+    predict(rgb) : keypoints
+  }
+  class CropConfig <<dataclass>>
+}
+
+package "Кроп и распрямление" {
+  class Pipeline <<module>> {
+    canonical_belly_crop()
+  }
+  class CropResult <<dataclass>> {
+    image
+    variant
+  }
+  class Unroll <<module>> {
+    unroll_ribbon()
+  }
+  class Geometry <<module>>
+}
+
+package "Эмбеддер (zero-shot)" {
+  class ProxyEmbed <<module>> {
+    build_proxy(MegaDescriptor)
+    embed(crop) : vec[1536]
+  }
+}
+
+package "Матчер пятен" {
+  class Spots <<module>> {
+    detect_spots()
+  }
+  class Constellation <<module>> {
+    match_constellations()
+    : score, pairs
+  }
+  class SpotConfig <<dataclass>>
+}
+
+package "Гибрид и оценка" {
+  class Hybrid <<module>> {
+    fuse_rerank()
+  }
+  class SealedTest <<module>> {
+    build_sealed_report()
+  }
+  class Stats <<module>> {
+    wilson_ci, mcnemar
+  }
+}
+
+package "Демо (MVP)" {
+  class GalleryIndex <<dataclass>> {
+    embeddings
+    ids, cohorts
+  }
+  class DemoBackend <<module>> {
+    load_gallery()
+    rank_individuals()
+    known_new_verdict()
+  }
+  class App <<streamlit>> {
+    app/demo.py
+  }
+}
+
+class CLI <<module>>
+
+Loader --> Pipeline
+BellySegmenter --> Pipeline
+PoseEstimator --> Pipeline
+CropConfig --> Pipeline
+Pipeline --> CropResult
+Pipeline --> Unroll
+Unroll --> Geometry
+CropResult --> ProxyEmbed
+ProxyEmbed --> GalleryIndex
+CropResult --> Spots
+Spots --> Constellation
+SpotConfig --> Constellation
+ProxyEmbed --> Hybrid
+Constellation --> Hybrid
+GalleryIndex --> DemoBackend
+DemoBackend --> App
+Hybrid ..> SealedTest
+SealedTest ..> Stats
+CLI ..> Pipeline
+CLI ..> ProxyEmbed
+CLI ..> Hybrid
+
+legend bottom
+  Финальная система: zero-shot MegaDescriptor + unroll_ribbon (top-K) + матчер созвездия пятен (оверлей).
+  FAISS/SQLite/FastAPI — план прода (см. диаграммы компонентов и развёртывания).
+endlegend
+@enduml

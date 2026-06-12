@@ -1,0 +1,22 @@
+# Ручки Блока 2 (кроп брюшка) — РАБОЧИЕ (пилотные) значения; это источник истины для прогонов.
+# Расходятся с дефолтами CropConfig (config.py) ТОЛЬКО в seg_conf_min/pose_conf_min (0.15 пилот vs 0.35/0.30
+# целевой fallback dataclass). Финальные числа ВКР считаны на значениях ИЗ ЭТОГО файла.
+canon_size: 384            # сторона канонического кропа (квадрат, letterbox)
+margin_frac: 0.06          # доля стороны bbox пуза, добавляемая в tight-кроп
+seg_conf_min: 0.15         # ПИЛОТ: занижен (модель недоуверена на малых данных); поднять к 0.30+ после доразметки/finetune
+seg_area_frac_min: 0.01    # доля кадра; пустая/мелкая маска → fallback
+pose_conf_min: 0.15        # ПИЛОТ: pose_conf = min(conf головы, conf клоаки); поднять при лучшей pose
+mask_background: black     # чем заливать фон вне маски: black|mean|none
+unroll_halfwidth_frac: 0.55  # полуширина unroll-прямоугольника от длины оси (для Блока 3)
+# --- Блок 3 (распрямление / unroll) ---
+unroll_methods: [debend, ribbon, wnorm]   # какие методы распрямления строить и A/B (debend — безопасный дефолт)
+unroll_poly_deg: 3            # степень полинома центральной линии
+unroll_min_rows: 24           # минимум строк тела, иначе fallback
+unroll_max_shift_frac: 0.45   # кламп сдвига строки (защита узора)
+unroll_pattern_tol_frac: 0.04 # допуск смещения центроидов пятен (измеренный гейт узора)
+clip_area_tol_frac: 0.02      # доля потери площади маски после поворота, выше которой кроп помечается clipped
+fallback_ladder: [belly_oriented, belly_mask, full]   # рунги, реально реализованные в pipeline
+seed: 42
+proxy_model: "hf-hub:BVRA/MegaDescriptor-L-384"
+seg_weights: "artifacts/belly_seg.pt"
+pose_weights: "artifacts/belly_pose.pt"

@@ -1,0 +1,33 @@
+# Версии зафиксированы под проверенное окружение (anaconda base, Python 3.13.9).
+# wildlife-tools НЕ ставить (конфликт numpy2/pandas3 — урок triton 2.0).
+
+# --- Используется в Блоке 1 (Данные) ---
+numpy==2.4.4
+pandas==3.0.2
+Pillow==10.4.0
+PyYAML==6.0.3
+tqdm
+matplotlib            # графики EDA (импортируется мягко: при отсутствии EDA деградирует в таблицы)
+pytest                # dev/тесты
+
+# --- Нужно для Блоков 2–6 (в Блоке 1 не задействовано, версии зафиксированы заранее) ---
+torch==2.11.0
+torchvision==0.26.0
+timm==1.0.27
+opencv-python==4.13.0.92
+scikit-image==0.25.2          # детекция пятен blob_log/blob_dog (spots.py, метод log/dog)
+pycocotools
+albumentations==2.0.8         # аугментации Блока 4 (Affine/ElasticTransform/ColorJitter, БЕЗ зеркала); kornia НЕ нужен
+scikit-learn==1.7.2           # open-set AUROC/порог Юдена (Блок 4)
+scipy==1.16.3                 # pseudo_label (ndimage); пин явный — не полагаться на транзитив scikit-learn
+
+# --- Блок 4 (эмбеддер re-ID, finetune) ---
+# Дообучение Swin-L идёт на Colab GPU (на MPS медленно). На Colab НЕ переустанавливать torch
+#   (колабовская CUDA-сборка) — пинить только timm==1.0.27 + albumentations==2.0.8 (см. notebooks/block4_colab.ipynb).
+# transformers==4.45.2   # ТОЛЬКО для 2-го кандидата MiewID (conservationxlabs/miewid-msv3, trust_remote_code);
+                    #   пин как в notebooks/block4_colab.ipynb (новее 4.45 ломает custom-код). Локально не требуется.
+
+# --- Демо (финализация ВКР): браузерное приложение `streamlit run app/demo.py` ---
+streamlit==1.51.0     # UI MVP. Запуск локально, offline (localhost:8501). Пин: width="stretch" требует ≥1.49.
+# faiss-cpu           # опц.: вектор-поиск для масштаба; на ~240 особях демо работает на numpy-косинусе.
+# ultralytics         # для пути «загрузить сырое фото» (YOLO seg+pose); режим «выбрать пробу» работает БЕЗ неё.

@@ -67,5 +67,6 @@ env/
 /*.md
 !/README.md
 !/THIRD_PARTY_NOTICES.md
+!/CHANGELOG.md
 /.*/
 !/.github/
